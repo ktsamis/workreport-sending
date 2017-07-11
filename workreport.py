@@ -65,17 +65,8 @@ def create_email(filename):
 
 
 def open_file(filename):
-    # This function return two different types.
-    # This is bad practice, now the caller has to know this and check for the type that is returned.
-    exists = os.path.isfile(filename)
-    # Try to load it and handle the exception
-    if exists is True:
-        with open(filename) as file:
-            content = file.read()
-            return content
-    else:
-        print("The filename you gave does not exist")
-        return False
+    with open(filename) as f:
+        return f.read()
 
 
 def vacation(filename):
