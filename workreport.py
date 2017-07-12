@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import datetime
 import os
 # Import smtplib for the actual sending function
 import smtplib
@@ -14,6 +13,11 @@ from email.message import EmailMessage
 from time import mktime
 # For notifications:
 from notify import notification
+
+OK = 0
+ERR_FILE = 1
+ERR_MAIL_SERVER = 2
+ERR_ELSE = 3
 
 today = date.today()
 
@@ -30,14 +34,7 @@ def parse_args():
     return args
 
 
-# Open the plain text file whose name is in filename for reading.
-def create_email(filename):
-    print(filename)
-    content = open_file(filename)
-    if content is False:
-        return False
-    # check_contents(content)
-    # Create a text/plain message
+def create_mail(content):
     msg = EmailMessage()
     msg.set_content(content)
     # me = the sender's email address
@@ -48,28 +45,10 @@ def create_email(filename):
     msg['Subject'] = str(today.strftime("Workreport, Week %Y-%W"))
     msg['From'] = me
     msg['To'] = you
-
-    # Send the message via our own SMTP server.
-    s = smtplib.SMTP('mailserver.nowhere.org', 25)
-    vac = vacation(filename)
-    if vac is False:
-        return False
-    else:
-        s.send_message(msg)
-    # Make a local copy of what we are going to send.
-    with open(msg['Subject'], 'wb') as f:
-        f.write(bytes(msg))
-        print("Report was saved successfully")
-    s.quit()
-    return 0
+    return msg
 
 
-def open_file(filename):
-    with open(filename) as f:
-        return f.read()
-
-
-def vacation(filename):
+def outdated_report(filename):
     cur_time = time.localtime()
     mod_time = time.localtime(os.path.getmtime(filename))
     print(mod_time)
@@ -78,31 +57,55 @@ def vacation(filename):
     dt = datetime.fromtimestamp(mktime(mod_time))
     ct = datetime.fromtimestamp(mktime(cur_time))
     diff = ct - dt
-    print(diff)
-    if diff > timedelta(days=6):
-        print("vacation")
-        return False
-    else:
-        print("still here")
+    if diff >= timedelta(days=6):
         return True
+    else:
+        return False
+
+
+# Open the plain text file whose name is in filename for reading.
+def send_mail(mail):
+    # Send the message via our own SMTP server.
+    with smtplib.SMTP('mailserver.nowhere.org', 25) as mailserver:
+        mailserver.send_message(mail)
+
+
+def backup_mail(mail):
+    # Make a local copy of what was sent.
+    with open(mail['Subject'], 'w') as f:
+        f.write(mail.as_string())
+
+
+def send_report(filename):
+    if outdated_report(filename):
+        return False
+    content = get_report(filename)
+    mail = create_mail(content)
+    send_mail(mail)
+    backup_mail(mail)
+    return True
+
+
+def get_report(filename):
+    with open(filename) as f:
+        return f.read()
 
 
 def main():
     args = parse_args()
     try:
-        c = create_email(args.file)
-        if c is False:
-            return False
+        c = send_report(args.file)
+        if not c:
+            return ERR_ELSE
         notification()
-        return True
-    # Never catch Exception if you won't handle it decently
-    except Exception as e:
-        return False
+        return OK
+    except IOError as e:
+        print("Could not read report file: %s" % e, file=exceptions)
+        return ERR_FILE
+    except smtplib.SMTPException as e:
+        print("Could not send report: %s" % e, file=exceptions)
+        return ERR_MAIL_SERVER
 
 
 if __name__ == "__main__":
-    # Return code bool - Why?
-    if main() is False:
-        sys.exit(1)
-    else:
-        print("Main exited normally")
+    sys.exit(main())
