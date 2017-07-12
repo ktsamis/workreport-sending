@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import os
 # Import smtplib for the actual sending function
 import smtplib
@@ -11,11 +12,12 @@ from datetime import timedelta
 # Import the email modules we'll need
 from email.message import EmailMessage
 from time import mktime
+
 # For notifications:
 from notify import notification
 
 OK = 0
-ERR_FILE = 1
+ERR_IO = 1
 ERR_MAIL_SERVER = 2
 ERR_ELSE = 3
 
@@ -93,18 +95,24 @@ def get_report(filename):
 
 def main():
     args = parse_args()
+    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s',
+                        datefmt='%m/%d/%Y %H:%M:%S',
+                        filename='workreport.log',
+                        level=logging.DEBUG)
+
     try:
         c = send_report(args.file)
         if not c:
+            logging.error('The report was not sent. Probably on vacation?')
             return ERR_ELSE
         notification()
         return OK
-    except IOError as e:
-        print("Could not read report file: %s" % e, file=exceptions)
-        return ERR_FILE
     except smtplib.SMTPException as e:
-        print("Could not send report: %s" % e, file=exceptions)
+        logging.error("I could not send report file due to the imap server. %s", e)
         return ERR_MAIL_SERVER
+    except IOError as e:
+        logging.error("Something went wrong with IO %s", e)
+        return ERR_IO
 
 
 if __name__ == "__main__":
