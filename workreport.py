@@ -26,11 +26,11 @@ today = date.today()
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="This script uses a file to send as text. You can give a file with the flag -f or use the default "
-                    "which is /home/user/workreport")
+        description="This script uses a file to send as text. You can give a file with the flag -f or use the default"
+                    "which is /home/user/workreports/workreport")
     parser.add_argument("-f", "--file", dest="file",
                         help="Filename relative to the path you are running the script from",
-                        default="/home/user/workreport", action='store')
+                        default="/home/user/workreports/workreport", action='store')
     args = parser.parse_args()
     print(args)
     return args
@@ -74,7 +74,7 @@ def send_mail(mail):
 
 def backup_mail(mail):
     # Make a local copy of what was sent.
-    with open(mail['Subject'], 'w') as f:
+    with open("/home/user/workreports/{subject}".format(subject=mail['Subject']), 'w') as f:
         f.write(mail.as_string())
 
 
@@ -97,7 +97,7 @@ def main():
     args = parse_args()
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        filename='workreport.log',
+                        filename='/home/user/workreports/workreport.log',
                         level=logging.DEBUG)
 
     try:
