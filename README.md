@@ -1,5 +1,5 @@
 The purpose of this python3 script is to automate the workreport sending every
-e.g.  week, or whenever you want. This will be determined in a cornjob, or you
+e.g.  week, or whenever you want. This will be determined in a cronjob, or you
 can run it manually if you want.
 
 To make the script work:
